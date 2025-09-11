@@ -13,8 +13,8 @@ This is an extension to the [MultiGrid](https://ini.github.io/docs/multigrid) li
 
     conda create -n multigoal python=3.10
     conda activate multigoal
-    git clone https://github.com/ini/multigrid
-    cd multigrid
+    git clone https://github.com/yhchong/hierarchical_planning.git
+    cd hierarchical_planning
     pip install -e .
 
 This package requires Python 3.9 or later.
