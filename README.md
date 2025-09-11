@@ -1,4 +1,4 @@
-# 🧭 Hierarchical Planning
+# 🧭 LLM-based Multi-Agent Planner
 
 <br/>
 <p align="center">
@@ -30,6 +30,7 @@ import multigrid.envs
 
 env = gym.make('MultiGrid-EmptyEnvV2-hidden-20x20-v0', agents=2, render_mode='human')
 agents = AgentCollection(num=2)
+# this is where you would insert your initial plan from LLM
 agents.tell({
     0: "search(1, 1, 10, 10, 15, 5)",
     1: "search(1, 1, 10, 10, 5, 15)"
@@ -37,7 +38,7 @@ agents.tell({
 
 observations, infos = env.reset()
 while not env.unwrapped.is_done():
-   # this is where you would insert your policy / policies
+   # this is where you would insert new plans from LLM if necessary 
    actions = agents.act()
    observations, rewards, terminations, truncations, infos = env.step(actions)
 
