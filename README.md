@@ -54,7 +54,8 @@ For details on how rewards are defined and used, refer to `tutorial.ipynb:Reward
   * Your submission will be evaluated over the specified number of rollouts.
   * The environment score is computed as the average cumulative reward across these rollouts.
   * The final score will be a weighted average of the scores across all test environments.
-
+  * Expect 2 to 5 agents.
+  * Expect grid size up to 500 x 500.
 <br>
 ⚠️ Important Constraints
 
