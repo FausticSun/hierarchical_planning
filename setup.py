@@ -24,7 +24,7 @@ def get_description():
     """
     Gets the description from the readme.
     """
-    with open("README.md") as fh:
+    with open("README.md", encoding="utf8") as fh:
         long_description = ""
         header_count = 0
         for line in fh:
