@@ -1,16 +1,19 @@
 # type: ignore
-import gymnasium as gym
-import multigrid.envs
-from agents import AgentCollection
 import configparser
 import logging
-import pandas as pd
-import sys
 import os
+import sys
+
+import gymnasium as gym
 import imageio
+import pandas as pd
+
+import multigrid.envs
+from agents import AgentCollection
 
 #####################################################
 # TODO: Import helper functions and classes, if any.
+from planner import initial_planner_agent
 
 #####################################################
 
@@ -19,31 +22,31 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler("out.log", mode='w'),
-        logging.StreamHandler(sys.stdout)
-    ]
+        logging.FileHandler("out.log", mode="w"),
+        logging.StreamHandler(sys.stdout),
+    ],
 )
-os.makedirs('gif', exist_ok=True)
+os.makedirs("gif", exist_ok=True)
 
 # Load test environment configurations
 config = configparser.ConfigParser()
-config.read('env_config_example.ini')
+config.read("env_config_example.ini")
 
 results = []
 for section in config.sections():
-    M = config.getint(section, 'number_of_agents')
-    N = config.getint(section, 'grid_size')
-    goals = eval(config.get(section, 'goals'))
-    mission_statement = eval(config.get(section, 'mission_statement'))
-    num_trials = config.getint(section, 'number_of_trials')
-    
+    M = config.getint(section, "number_of_agents")
+    N = config.getint(section, "grid_size")
+    goals = eval(config.get(section, "goals"))
+    mission_statement = eval(config.get(section, "mission_statement"))
+    num_trials = config.getint(section, "number_of_trials")
+
     # Print the environment configuration
     logging.info(f"Env: {section}")
     logging.info(f"Number of agents: {M}")
     logging.info(f"Grid size: {N}")
     logging.info(f"Mission statement: {mission_statement}")
     logging.info(f"Total number of targets: {len(goals)}")
-    
+
     results_i = []
     for trial in range(1, num_trials + 1):
         logging.info(f"Trial {trial}/{num_trials} for {section}")
@@ -51,20 +54,25 @@ for section in config.sections():
 
         try:
             # Create the environment with specified parameters
-            env = multigrid.envs.EmptyEnvV2(size=N, # Specify the size of the grid, N
-                                            agents=M, # Specify number of agents, M
-                                            goals=goals, # Specify target positions for agents
-                                            mission_space=mission_statement, # Mission statement for the environment
-                                            render_mode='rgb_array',
-                                            hidden_goals=True,
-                                            # max_steps=50, # For debugging only
-                                            )
+            env = multigrid.envs.EmptyEnvV2(
+                size=N,  # Specify the size of the grid, N
+                agents=M,  # Specify number of agents, M
+                goals=goals,  # Specify target positions for agents
+                mission_space=mission_statement,  # Mission statement for the environment
+                render_mode="rgb_array",
+                hidden_goals=True,
+                # max_steps=50, # For debugging only
+            )
             observations, infos = env.reset()
             frames.append(env.render())
             agents = AgentCollection(num=M)
 
             #####################################################
             # TODO: Add code to create the initial HLA plan when needed.
+            plan = initial_planner_agent.invoke({"grid_length": N, "num_agents": M})
+            for agent, actions in plan.agents.items():
+                for action in actions:
+                    agents.tell({agent: action.serialize()})
 
             #####################################################
 
@@ -80,31 +88,44 @@ for section in config.sections():
             logging.info(f"Number of steps taken: {env.unwrapped.step_count}")
             logging.info(f"Rewards: {infos['total_reward']}")
             num_targets_left = len(env.unwrapped.goals)
-            logging.info(f"Number of targets found: {env.unwrapped.total_goals - num_targets_left}")
+            logging.info(
+                f"Number of targets found: {env.unwrapped.total_goals - num_targets_left}"
+            )
             logging.info(f"Number of targets remaining: {num_targets_left}")
             imageio.mimsave(f"gif/{section}_{trial}.gif", frames, fps=30, loop=0)
 
-            total_targets, steps_taken = env.unwrapped.total_goals, env.unwrapped.step_count
-            final_reward, targets_found = infos['total_reward'], env.unwrapped.total_goals - num_targets_left
-            
+            total_targets, steps_taken = (
+                env.unwrapped.total_goals,
+                env.unwrapped.step_count,
+            )
+            final_reward, targets_found = (
+                infos["total_reward"],
+                env.unwrapped.total_goals - num_targets_left,
+            )
+
         except Exception as e:
             logging.error(f"An error occurred during trial {trial} for {section}: {e}")
             num_targets_left = None
-            total_targets, steps_taken, final_reward, targets_found = None, None, None, None
-            
+            total_targets, steps_taken, final_reward, targets_found = (
+                None,
+                None,
+                None,
+                None,
+            )
+
         finally:
             results_i = {
-                'env_name': section,
-                'trial_id': trial,
-                'num_agents': M,
-                'gridsize': N,
-                'total_targets': total_targets,
-                'steps_taken': steps_taken,
-                'final_reward': final_reward,
-                'targets_found': targets_found,
-                'targets_remaining': num_targets_left
+                "env_name": section,
+                "trial_id": trial,
+                "num_agents": M,
+                "gridsize": N,
+                "total_targets": total_targets,
+                "steps_taken": steps_taken,
+                "final_reward": final_reward,
+                "targets_found": targets_found,
+                "targets_remaining": num_targets_left,
             }
             results.append(results_i)
             env.close()
-            
-pd.DataFrame(results).to_csv('results.csv', sep=';', index=False)
+
+pd.DataFrame(results).to_csv("results.csv", sep=";", index=False)

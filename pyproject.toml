@@ -36,6 +36,9 @@ dependencies = [
     "httpx>=0.28.1",
     "python-dotenv>=1.1.1",
     "langchain-openai>=0.3.33",
+    "langchain[openai]>=0.3.27",
+    "langchain-prompty>=0.1.2",
+    "prompty>=0.1.50",
 ]
 dynamic = ["version"]
 
