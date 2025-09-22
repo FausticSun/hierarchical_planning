@@ -1,4 +1,3 @@
-import itertools as it
 import os
 
 from langchain_prompty import create_chat_prompt
