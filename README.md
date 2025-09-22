@@ -11,11 +11,32 @@ This is an extension to the [MultiGrid](https://ini.github.io/docs/multigrid) li
 
 ## 💾 Installation
 
-    conda create -n multigoal python=3.10
-    conda activate multigoal
+### Installing uv
+
+uv is a fast Python package and project manager written in Rust, recommended for this project.
+
+For detailed installation instructions, refer to the [uv documentation](https://docs.astral.sh/uv/getting-started/installation/).
+
+Quick install options:
+
+```bash
+# Using pip (requires Python 3.8+)
+pip install uv
+
+# Using installer (Unix/macOS/Linux)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Using Homebrew (macOS)
+brew install uv
+```
+
+For Windows and other platforms, see the documentation link above.
+
+After installing uv:
+
     git clone https://github.com/yhchong/hierarchical_planning.git
     cd hierarchical_planning
-    pip install -e .
+    uv sync
 
 This package requires Python 3.9 or later.
 <br>
