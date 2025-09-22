@@ -42,7 +42,16 @@ This package requires Python 3.9 or later.
 <br>
 <br>
 
-## 🚀 Getting Started
+## 📁 Additional Setup
+
+After cloning the repository, ensure the following files—provided separately via other means—are placed in the root directory:
+
+- `cert.pem`
+- `.env`
+
+These files are required for the project to function properly.
+
+## � Getting Started
 1) See `tutorial.ipynb`.
 
 ```python
