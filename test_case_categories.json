@@ -1,0 +1,149 @@
+{
+    "evaluation_framework": {
+        "name": "Multi-Agent Target Search Planner Evaluation Taxonomy",
+        "version": "1.0",
+        "purpose": "A structured taxonomy to evaluate planner robustness across spatial reasoning, exploration efficiency, bonus optimization, agent coordination, and input robustness under constrained, static, and partial-information environments.",
+        "categories": [
+            {
+                "category_id": "SPATIAL_REASONING",
+                "name": "Spatial Reasoning & Region Interpretation",
+                "description": "Evaluates the planner’s ability to parse, interpret, and geometrically reason about ambiguous, overlapping, nested, or imprecise spatial descriptions in the mission statement. Tests whether the planner can infer valid search zones from natural language, eliminate redundancy, and map linguistic cues to precise grid regions without access to ground-truth goals.",
+                "sub_categories": [
+                    {
+                        "id": "SPATIAL_1",
+                        "name": "Single Dominant Region",
+                        "description": "All targets are confined to one small region. Tests concentration efficiency: can the planner assign multiple agents to the same region with divergent search patterns (e.g., spiral, grid scan) to minimize overlap and maximize discovery speed?"
+                    },
+                    {
+                        "id": "SPATIAL_2",
+                        "name": "Nested Bounding Regions",
+                        "description": "Mission regions are hierarchically nested (e.g., a smaller region is entirely within a larger one). Tests whether the planner can deduplicate search space and avoid redundant agent assignments by recognizing containment relationships."
+                    },
+                    {
+                        "id": "SPATIAL_3",
+                        "name": "Unbalanced Region Sizes",
+                        "description": "Regions vary drastically in size (e.g., one 3×3 area vs. one 40×40 area). Tests whether the planner scales search effort proportionally — assigning more steps or agents to larger regions — rather than treating all regions equally."
+                    },
+                    {
+                        "id": "SPATIAL_4",
+                        "name": "Mission with Redundant Descriptions",
+                        "description": "The mission repeats the same region using different wording (e.g., 'top-left corner' and 'area from x=5 to x=10, y=5 to y=10'). Tests semantic parsing robustness: can the planner detect equivalence and avoid splitting agents across identical physical zones?"
+                    },
+                    {
+                        "id": "SPATIAL_5",
+                        "name": "High-Redundancy Mission with Low Target Density",
+                        "description": "The mission describes many overlapping or vague regions, but only one or two targets exist. Tests noise filtering: can the planner reduce the described regions to their logical intersection or union and avoid misallocating agents to meaningless subdivisions?"
+                    }
+                ]
+            },
+            {
+                "category_id": "COVERAGE_STRATEGY",
+                "name": "Coverage Strategy & Exploration Efficiency",
+                "description": "Focuses on how the planner organizes agent motion to maximize spatial coverage under constraints of grid size, target density, and start position. Tests systematic search patterns, avoidance of duplication, and optimal deployment of agents — especially when targets are sparse, clustered, or located in hard-to-reach areas.",
+                "sub_categories": [
+                    {
+                        "id": "COVERAGE_1",
+                        "name": "Uniformly Sparse Distribution",
+                        "description": "Targets are scattered sparsely and uniformly across the entire grid. Tests whether the planner can avoid local bias and systematically explore distant regions without prior guidance, leveraging the absence of clustering to distribute agents optimally."
+                    },
+                    {
+                        "id": "COVERAGE_2",
+                        "name": "Minimal-Information Mission",
+                        "description": "The mission statement gives no spatial clues (e.g., 'targets are somewhere on the grid'). Forces the planner into blind systematic exploration from (1,1). Tests worst-case scalability: can it generate a provably complete, coverage-optimal search trajectory without any prior knowledge?"
+                    },
+                    {
+                        "id": "COVERAGE_3",
+                        "name": "Fringe-Dominated Distribution",
+                        "description": "All targets lie near grid boundaries (e.g., along edges or corners), with the center empty. Tests whether the planner can override heuristic tendencies to drift inward and prioritize boundary exploration early — avoiding wasted steps in central regions."
+                    },
+                    {
+                        "id": "COVERAGE_4",
+                        "name": "Symmetric but Disconnected Regions",
+                        "description": "Two or more regions are identical in size and distance from (1,1), but located in symmetric but disconnected positions. Tests symmetry-aware agent assignment: can the planner assign one agent per symmetric region to ensure parallel discovery, avoiding one agent covering both (which would be slower)?"
+                    },
+                    {
+                        "id": "COVERAGE_5",
+                        "name": "Edge-Only Target Zones",
+                        "description": "All targets lie along the very edge of the grid (e.g., y=1 or x=N-1), but the mission describes them vaguely (e.g., 'near the border'). Tests precision of region interpretation: can the planner narrow the search to the actual boundary line, or will it waste steps searching the entire half-grid?"
+                    }
+                ]
+            },
+            {
+                "category_id": "BONUS_OPTIMIZATION",
+                "name": "Strategic Prioritization & Bonus Optimization",
+                "description": "Probes the planner’s ability to prioritize actions for maximum bonus eligibility. Since the bonus B is only awarded if all targets are found, the planner must balance speed and completeness — avoiding premature focus on easy targets at the cost of leaving a single distant target undiscovered.",
+                "sub_categories": [
+                    {
+                        "id": "BONUS_1",
+                        "name": "High-Density Core with Outliers",
+                        "description": "Most targets are clustered in one central region, but one target is isolated far from the cluster. Tests risk-reward tradeoff: should agents stay to clear the dense cluster quickly, or should one be dispatched early to the outlier to ensure bonus eligibility? A failure leads to missed bonus."
+                    },
+                    {
+                        "id": "BONUS_2",
+                        "name": "Target Count Mismatch (Implicit)",
+                        "description": "The mission implies a number of targets that doesn’t match the actual goal count (e.g., 'three targets in region A' but there are four total). Tests error resilience: can the planner detect inconsistency and still plan to find all targets, even if the mission is misleading? (Planner must rely on total target count inferred from environment.)"
+                    }
+                ]
+            },
+            {
+                "category_id": "AGENT_ALLOCATION",
+                "name": "Agent Allocation & Coordination Dynamics",
+                "description": "Examines how the planner distributes agents across regions given constraints on agent count, target count, and region geometry. Tests whether the planner can match agent count to search demand, avoid under- or over-allocation, and coordinate multi-agent behavior to minimize overlap and maximize parallel discovery.",
+                "sub_categories": [
+                    {
+                        "id": "AGENT_1",
+                        "name": "Balanced Region Distribution",
+                        "description": "Targets are evenly distributed across 2–4 non-overlapping regions of similar size and distance. Tests fair partitioning and balanced exploration load — optimal strategy requires symmetric path planning and coordination to maximize early discovery and bonus accumulation."
+                    },
+                    {
+                        "id": "AGENT_2",
+                        "name": "Skewed Target Density",
+                        "description": "One or two regions contain the majority of targets. Tests risk-aware allocation: should agents cluster in high-density zones, or spread out to ensure no target is missed? Evaluates tradeoff between speed and completeness."
+                    },
+                    {
+                        "id": "AGENT_3",
+                        "name": "High Agent-to-Target Ratio",
+                        "description": "More agents than targets (e.g., 5 agents, 3 targets). Tests collaboration vs. redundancy: can agents be assigned to complementary paths within the same region? Or will extra agents be productively deployed to explore fringe areas?"
+                    },
+                    {
+                        "id": "AGENT_4",
+                        "name": "Low Agent-to-Target Ratio",
+                        "description": "Fewer agents than targets (e.g., 2 agents, 5 targets). Tests multi-target coordination under pressure: can agents be assigned to multiple regions sequentially? Does the planner prioritize targets that enable faster cumulative reward, even if it means delayed discovery of others?"
+                    },
+                    {
+                        "id": "AGENT_5",
+                        "name": "Symmetric but Disconnected Regions",
+                        "description": "Two or more regions are identical in size and distance from (1,1), but located in symmetric but disconnected positions. Tests symmetry-aware agent assignment: can the planner assign one agent per symmetric region to ensure parallel discovery, avoiding one agent covering both (which would be slower)?"
+                    }
+                ]
+            },
+            {
+                "category_id": "INPUT_ROBUSTNESS",
+                "name": "Robustness to Imperfect Input & Edge Cases",
+                "description": "Tests the planner’s resilience to imperfect, incomplete, or misleading inputs — whether from vague mission statements, inconsistent target counts, or edge-case spatial configurations. Ensures the planner behaves reliably even when the environment or description violates ideal assumptions.",
+                "sub_categories": [
+                    {
+                        "id": "ROBUST_1",
+                        "name": "Minimal-Information Mission",
+                        "description": "The mission statement gives no spatial clues (e.g., 'targets are somewhere on the grid'). Forces the planner into blind systematic exploration from (1,1). Tests worst-case scalability: can it generate a provably complete, coverage-optimal search trajectory without any prior knowledge?"
+                    },
+                    {
+                        "id": "ROBUST_2",
+                        "name": "Target Count Mismatch (Implicit)",
+                        "description": "The mission implies a number of targets that doesn’t match the actual goal count (e.g., 'three targets in region A' but there are four total). Tests error resilience: can the planner detect inconsistency and still plan to find all targets, even if the mission is misleading? (Planner must rely on total target count inferred from environment.)"
+                    },
+                    {
+                        "id": "ROBUST_3",
+                        "name": "Edge-Only Target Zones",
+                        "description": "All targets lie along the very edge of the grid (e.g., y=1 or x=N-1), but the mission describes them vaguely (e.g., 'near the border'). Tests precision of region interpretation: can the planner narrow the search to the actual boundary line, or will it waste steps searching the entire half-grid?"
+                    },
+                    {
+                        "id": "ROBUST_4",
+                        "name": "High-Redundancy Mission with Low Target Density",
+                        "description": "The mission describes many overlapping or vague regions, but only one or two targets exist. Tests noise filtering: can the planner reduce the described regions to their logical intersection or union and avoid misallocating agents to meaningless subdivisions?"
+                    }
+                ]
+            }
+        ]
+    }
+}
