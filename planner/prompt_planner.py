@@ -14,6 +14,7 @@ class PromptPlanner(BasePlanner):
     mission_statement: str = ""
     number_of_agents: int = -1
     grid_size: int = -1
+    number_of_targets: int = -1
 
     def __init__(
         self,
@@ -23,7 +24,8 @@ class PromptPlanner(BasePlanner):
     ) -> None:
         self.llm = llm
         self.mission_statement = observations[0]["mission"]
-        self.number_of_agents = observations["global"]["num_goals"]
+        self.number_of_agents = len(observations.keys()) - 1
+        self.number_of_targets = observations["global"]["num_goals"]
 
     def initial_plan(self):
         model_with_structure = self.llm.with_structured_output(Plan)
