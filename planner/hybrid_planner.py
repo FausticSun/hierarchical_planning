@@ -9,7 +9,7 @@ from .schemas.plan import Plan
 from .utils.tracker import Tracker
 
 
-class PromptPlanner(BasePlanner):
+class HybridPlanner(BasePlanner):
     llm: BaseChatModel
     tracker: Tracker
     mission_statement: str = ""
