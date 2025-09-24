@@ -70,7 +70,7 @@ class SearchAction(Action):
 
 
 # Union of all actions with discriminant field
-ActionModel = Union[MoveAction, SearchAction]
+ActionModel = Union[MoveAction]
 
 
 class Plan(BaseModel):

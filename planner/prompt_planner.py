@@ -17,7 +17,7 @@ class PromptPlanner(BasePlanner):
     grid_size: int = -1
     number_of_targets: int = -1
     agent_positions: Dict[int, Tuple[int, int]]
-    found_targets = []
+    found_targets = set()
 
     def __init__(
         self,
@@ -62,7 +62,7 @@ class PromptPlanner(BasePlanner):
                 tuple(int(x) for x in observations[i]["location"])
                 for i in found_targets_agents
             ]
-            self.found_targets.append(found_targets_locations)
+            self.found_targets.update(found_targets_locations)
             agent_locations = {
                 k: tuple(int(x) for x in v["location"]) for k, v in observations.items()
             }
