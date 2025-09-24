@@ -21,6 +21,7 @@ class PromptPlanner(BasePlanner):
     def __init__(
         self,
         llm: BaseChatModel,
+        grid_size,
         observations,
         infos,
     ) -> None:
@@ -29,6 +30,7 @@ class PromptPlanner(BasePlanner):
         self.number_of_agents = len(observations.keys()) - 1
         self.number_of_targets = observations["global"]["num_goals"]
         self.agent_positions = {i: (1, 1) for i in range(0, self.number_of_agents)}
+        self.grid_size = grid_size
 
     def initial_plan(self) -> dict:
         model_with_structure = self.llm.with_structured_output(Plan)
@@ -38,6 +40,7 @@ class PromptPlanner(BasePlanner):
             {
                 "grid_length": self.grid_size,
                 "num_agents": self.number_of_agents,
+                "num_targets": self.number_of_targets,
                 "mission": self.mission_statement,
             }
         )
