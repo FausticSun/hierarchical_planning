@@ -23,4 +23,5 @@ local_llm = ChatOpenAI(
     api_key=SecretStr(os.environ["LOCAL_API_KEY"]),
     base_url=os.environ["LOCAL_BASE_URL"],
     model="qwen3-next",
+    presence_penalty=1,
 )
