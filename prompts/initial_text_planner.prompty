@@ -1,0 +1,40 @@
+---
+name: Initial Planner
+description: Creates an intial plan based on the grid length and number of agents available
+model:
+  api: chat
+sample:
+  grid_length: 10
+  num_agents: 2
+  mission: All targets are contained within the region from (3, 3) to (5, 5).
+---
+system:
+Generate a natural language plan outline that systematically locates all T hidden targets in an N×N grid using M agents, starting from (1,1), while respecting the surrounding wall boundary and leveraging mission-specific hints. Prioritize minimizing total steps through parallel execution, adaptive region partitioning, and efficient movement.
+
+All agents begin at (1,1). The grid is bounded by an impassable wall at the outer edges (coordinates must remain within [1,N]×[1,N]); internal movement is unrestricted, including diagonal steps. Targets are invisible until discovered via a search action over a rectangular region, and each search must be performed from a position within or on the boundary of the searched area.
+
+First, analyze the mission statement to identify any constraints or probabilistic hints about target locations (e.g., “One target is in (1,1) to (5,5)” or “Targets are likely near the center”). Use this to prioritize high-probability zones for early or concentrated search coverage. If T is small (e.g., T << M), avoid full-grid coverage—instead, allocate agents to focused, overlapping, or mission-specified regions. If T is large or unknown, ensure complete, non-redundant partitioning of the grid.
+
+Partition the grid into M rectangular subregions of approximately equal area, adjusting boundaries to align with mission hints (e.g., if the top-left quadrant is excluded, remove it from assignment; if the center is emphasized, assign multiple agents to overlap there). Assign each agent one primary region, ensuring all regions are fully contained within [1,N]×[1,N].
+
+For each agent, plan a two-phase sequence: (1) move directly from (1,1) to a key entry point of its assigned region (e.g., corner or center), taking the shortest path; (2) execute a single search over the entire assigned region from that position. If mission hints suggest multiple targets or uncertainty, assign one or more agents to search high-priority regions first, potentially with larger or overlapping areas, while others cover remaining zones in parallel.
+
+Ensure no region is searched more than once unless justified by mission ambiguity or T > number of regions. All moves and searches must be valid (agent must be at cur_x,cur_y before searching; search bounds must satisfy x1≤x2, y1≤y2). Maximize parallelism by aligning all agents’ move and search actions to occur in the same step where possible.
+
+The total number of steps equals the length of the longest agent’s action sequence. Optimize by minimizing travel distance to search start points and avoiding unnecessary coverage. If T=0, return an empty plan. If N=1, only one cell exists—assign all agents to search (1,1) from (1,1) in step 1, though only one needs to act.
+
+Final plan structure:  
+1. Parse mission for constraints and target likelihoods.  
+2. Determine whether full grid coverage is needed (T large) or targeted search suffices (T small).  
+3. Divide grid into M non-overlapping (or strategically overlapping) rectangular regions, respecting mission.  
+4. Assign each agent one region.  
+5. For each agent: compute optimal move from (1,1) to a boundary or center point of its region.  
+6. Assign one search action per agent over its region from the arrival point.  
+7. Sequence actions so all moves complete before searches begin, and all actions are within grid bounds.  
+8. Report the step-by-step logical plan in natural language, including region assignments, movement goals, search areas, and justification based on T and mission.
+
+user:
+N={{grid_length}}
+M={{num_agents}}
+T={{num_targets}}
+mission={{mission}}

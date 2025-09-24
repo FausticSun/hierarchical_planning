@@ -31,17 +31,35 @@ class PromptPlanner(BasePlanner):
         self.number_of_targets = observations["global"]["num_goals"]
         self.agent_positions = {i: (1, 1) for i in range(0, self.number_of_agents)}
         self.grid_size = grid_size
+        self.tracker = Tracker(grid_size)
 
     def initial_plan(self) -> dict:
-        model_with_structure = self.llm.with_structured_output(Plan)
-        prompt = create_chat_prompt(os.getcwd() + "/prompts/initial_planner.prompty")
-        initial_planner = prompt | model_with_structure
-        plan = initial_planner.invoke(
+        # Generate a textual plan
+        prompt = create_chat_prompt(
+            os.getcwd() + "/prompts/initial_text_planner.prompty"
+        )
+        initial_text_planner = prompt | self.llm
+        text_plan = initial_text_planner.invoke(
             {
                 "grid_length": self.grid_size,
                 "num_agents": self.number_of_agents,
                 "num_targets": self.number_of_targets,
                 "mission": self.mission_statement,
+            }
+        ).content
+        print(text_plan)
+
+        # Convert the textual plan into structured instructions
+        prompt = create_chat_prompt(os.getcwd() + "/prompts/plan_structurer.prompty")
+        model_with_structure = self.llm.with_structured_output(Plan)
+        plan_structurer = prompt | model_with_structure
+        plan = plan_structurer.invoke(
+            {
+                "grid_length": self.grid_size,
+                "num_agents": self.number_of_agents,
+                "num_targets": self.number_of_targets,
+                "mission": self.mission_statement,
+                "plan": text_plan,
             }
         )
         return plan.agents
