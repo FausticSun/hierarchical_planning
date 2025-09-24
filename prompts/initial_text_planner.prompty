@@ -6,6 +6,7 @@ model:
 sample:
   grid_length: 10
   num_agents: 2
+  num_targets: 2
   mission: All targets are contained within the region from (3, 3) to (5, 5).
 ---
 system:
