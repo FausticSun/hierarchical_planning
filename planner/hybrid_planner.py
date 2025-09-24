@@ -9,7 +9,7 @@ from .schemas.plan import Plan
 from .utils.tracker import Tracker
 
 
-class HybridPlanner(BasePlanner):
+class PromptPlanner(BasePlanner):
     llm: BaseChatModel
     tracker: Tracker
     mission_statement: str = ""
@@ -46,6 +46,12 @@ class HybridPlanner(BasePlanner):
         )
         return plan.agents
 
-    def replan(self, observations, rewards, terminations, truncations, infos) -> dict:
-        # self.tracker.observe(observations, rewards)
+    def replan(
+        self, agents, observations, rewards, terminations, truncations, infos
+    ) -> dict:
+        del observations["global"]
+        if any([r == 1 for r in rewards.values()]):
+            # Re-plan when a target is found
+            pass
+        self.tracker.observe(observations, rewards)
         return {}
