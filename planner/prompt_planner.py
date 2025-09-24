@@ -33,6 +33,7 @@ class PromptPlanner(BasePlanner):
         initial_planner = prompt | model_with_structure
         plan = initial_planner.invoke(
             {
+                "grid_length": self.grid_size,
                 "num_agents": self.number_of_agents,
                 "mission": self.mission_statement,
             }
