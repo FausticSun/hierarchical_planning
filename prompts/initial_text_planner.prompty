@@ -12,34 +12,40 @@ sample:
 system:
 Generate a natural language plan outline that systematically locates all T hidden targets in an N×N grid using M agents, starting from (1,1), while respecting the surrounding wall boundary and leveraging mission-specific hints. Prioritize minimizing total steps through parallel execution, adaptive region partitioning, and efficient movement.
 
-All agents begin at (1,1). The grid is bounded by an impassable wall at the outer edges (coordinates must remain within [1,N]×[1,N]); internal movement is unrestricted, including diagonal steps. Targets are invisible until discovered by physically moving an agent to the exact cell containing the target—there is no abstract “search” action. Discovery occurs only when an agent’s position matches the target’s location. Each agent must traverse the grid step-by-step to uncover targets.
+All agents begin at (1,1). The grid is indexed with (0,0) as the top-left corner, (N,0) as the top-right, (N,N) as the bottom-right, and (0,N) as the bottom-left. However, due to impassable walls along the outermost perimeter, the only allowable movement and exploration area is the interior region bounded by coordinates from (1,1) to (N-2,N-2) inclusive. That is, cells along the outermost rows and columns — specifically, any cell where x=0, x=N-1, y=0, or y=N-1 — are walls and cannot be entered or traversed. All agents must remain strictly within the valid area [1, N-2] × [1, N-2].
 
-First, analyze the mission statement to identify any constraints or probabilistic hints about target locations (e.g., “One target is in (1,1) to (5,5)” or “Targets are likely near the center”). Use this to prioritize high-probability zones for early or concentrated exploration. If T is small (e.g., T << M), avoid full-grid coverage—instead, allocate agents to focused, overlapping, or mission-specified regions. If T is large or unknown, ensure complete, non-redundant traversal of the grid.
+Targets are invisible until discovered by physically moving an agent to the exact cell containing the target—there is no abstract “search” action. Discovery occurs only when an agent’s position matches the target’s location. Each agent must traverse the grid step-by-step to uncover targets; movement is allowed in any of the 8 directions (including diagonals), with each step changing position by at most one unit in any direction.
 
-Partition the grid into M rectangular subregions of approximately equal area, adjusting boundaries to align with mission hints (e.g., if the top-left quadrant is excluded, remove it from assignment; if the center is emphasized, assign multiple agents to overlap there). Assign each agent one primary region, ensuring all regions are fully contained within [1,N]×[1,N]. Where mission hints suggest uncertainty or multiple targets, allow strategic overlap between regions to reduce risk of missed targets.
+First, analyze the mission statement to identify any constraints or probabilistic hints about target locations (e.g., “One target is in (1,1) to (5,5)” or “Targets are likely near the center”). Use this to prioritize high-probability zones for early or concentrated exploration. If T is small (e.g., T << M), avoid full-grid coverage—instead, allocate agents to focused, overlapping, or mission-specified regions. If T is large or unknown, ensure complete, non-redundant traversal of the valid interior area.
 
-For each agent, plan a two-phase sequence: (1) move directly from (1,1) to a key entry point of its assigned region (e.g., corner, center, or high-probability cell), taking the shortest path (using diagonal moves where possible); (2) systematically traverse all cells within its assigned region using an efficient coverage pattern (e.g., row-wise, spiral, or zigzag) to ensure every cell is visited exactly once. Movement must be stepwise—each step changes position by at most one unit in any direction (including diagonally), and no agent may move outside [1,N]×[1,N].
+Partition the valid interior region [1, N-2] × [1, N-2] into M rectangular subregions of approximately equal area, adjusting boundaries to align with mission hints (e.g., if the top-left quadrant is excluded, remove it from assignment; if the center is emphasized, assign multiple agents to overlap there). Assign each agent one primary region, ensuring all regions are fully contained within [1, N-2] × [1, N-2]. Where mission hints suggest uncertainty or multiple targets, allow strategic overlap between regions to reduce risk of missed targets.
 
-Ensure no cell is visited by more than one agent unless justified by mission ambiguity or T > number of regions. All movements must be valid and within grid bounds. Maximize parallelism by aligning all agents’ movement sequences so that their step counts are as balanced as possible. The total number of steps equals the length of the longest agent’s movement sequence.
+For each agent, plan a two-phase sequence:  
+(1) Move directly from (1,1) to a key entry point of its assigned region (e.g., corner, center, or high-probability cell), taking the shortest path using diagonal moves where possible;  
+(2) Systematically traverse all cells within its assigned region using an efficient coverage pattern (e.g., row-wise, spiral, or zigzag) to ensure every valid cell is visited exactly once. Movement must be stepwise—each step changes position by at most one unit in any direction (including diagonally), and no agent may move outside [1, N-2] × [1, N-2].
 
-Optimize by:
-- Minimizing travel distance to region entry points,
-- Using diagonal moves to reduce step count,
-- Prioritizing high-probability cells early in each agent’s traversal,
-- Avoiding redundant coverage unless mission hints demand it (e.g., “targets may be in overlapping zones”),
+Ensure no cell is visited by more than one agent unless justified by mission ambiguity or T > number of regions. All movements must be valid and within the interior bounds. Maximize parallelism by aligning all agents’ movement sequences so that their step counts are as balanced as possible. The total number of steps equals the length of the longest agent’s movement sequence.
+
+Optimize by:  
+- Minimizing travel distance to region entry points,  
+- Using diagonal moves to reduce step count,  
+- Prioritizing high-probability cells early in each agent’s traversal,  
+- Avoiding redundant coverage unless mission hints demand it (e.g., “targets may be in overlapping zones”),  
 - Ensuring full coverage of assigned regions without gaps.
 
-If T=0, return an empty plan. If N=1, only one cell exists—assign all agents to move to (1,1) in step 1; only one agent needs to actually arrive, but all may do so in parallel for symmetry.
+If T=0, return an empty plan.  
+If N ≤ 2, then the interior region [1, N-2] × [1, N-2] is empty or invalid—return “No valid exploration area” as no targets can be located.  
+If N=3, the only valid cell is (1,1); assign all agents to move to (1,1) in step 1; only one agent needs to arrive, but all may do so in parallel for symmetry.
 
 Final plan structure:  
 1. Parse mission for constraints and target likelihoods.  
-2. Determine whether full grid coverage is needed (T large or unknown) or targeted exploration suffices (T small or hinted).  
-3. Divide grid into M non-overlapping (or strategically overlapping) rectangular regions, respecting mission hints.  
+2. Determine whether full interior coverage is needed (T large or unknown) or targeted exploration suffices (T small or hinted).  
+3. Divide the valid interior region [1, N-2] × [1, N-2] into M non-overlapping (or strategically overlapping) rectangular subregions, respecting mission hints.  
 4. Assign each agent one region.  
 5. For each agent: compute optimal path from (1,1) to a high-efficiency entry point of its region.  
 6. For each agent: design a complete, non-redundant traversal path through its assigned region, visiting every cell exactly once using stepwise moves (no search actions).  
 7. Sequence all agent movements so that moves occur in discrete steps, with parallel execution maximized.  
-8. Report the step-by-step logical plan in natural language, including region assignments, movement goals, traversal patterns, and justification based on T and mission.
+8. Report the step-by-step logical plan in natural language, including region assignments, movement goals, traversal patterns, and justification based on T, N, and mission hints.
 
 user:
 N={{grid_length}}

@@ -14,20 +14,26 @@ sample:
 system:
 Generate a natural language plan outline that systematically locates all remaining T hidden targets in an N×N grid using M agents, while respecting the surrounding wall boundary and leveraging mission-specific hints. Prioritize minimizing total steps through parallel execution, adaptive region partitioning, and efficient movement.
 
-Agents may begin at arbitrary positions (not necessarily (1,1)) — the current location of each agent is provided. Some targets may have already been discovered; these are also provided. Only undiscovered targets remain to be found. The grid is bounded by an impassable wall at the outer edges (coordinates must remain within [1,N]×[1,N]); internal movement is unrestricted, including diagonal steps. Targets are invisible until discovered, and discovery occurs only when an agent physically moves into the exact grid cell containing the target. There is no “search” action — targets are revealed solely through direct agent occupancy.
+Agents may begin at arbitrary positions within the valid movement area — the current location of each agent is provided. Some targets may have already been discovered; these are also provided. Only undiscovered targets remain to be found. The grid is bounded by impassable walls along the outermost edges:  
+- The valid movement area is restricted to coordinates from (1, 1) to (N-2, N-2) inclusive.  
+- The outermost layer of cells — rows 0 and N-1, and columns 0 and N-1 — are walls and are completely impassable.  
+- Coordinate system: (0,0) is the top-left corner, (N-1, 0) is the top-right, (N-1, N-1) is the bottom-right, and (0, N-1) is the bottom-left.  
+Thus, all agent positions and target locations must lie strictly within [1, N-2] × [1, N-2].
+
+Targets are invisible until discovered, and discovery occurs only when an agent physically moves into the exact grid cell containing the target. There is no “search” action — targets are revealed solely through direct agent occupancy. Diagonal movement is allowed, and agents may move freely within the valid area (1 to N-2 in both dimensions).
 
 First, analyze the mission statement to identify any constraints or probabilistic hints about target locations (e.g., “One target is in (1,1) to (5,5)” or “Targets are likely near the center”). Combine this with the set of already-found targets to infer likely locations of remaining targets. For example:  
 - If one target was found in the top-left and the hint says “targets are clustered,” prioritize nearby regions.  
-- If all found targets are on the perimeter, suspect interior targets remain.  
+- If all found targets are near the perimeter of the valid area, suspect interior targets remain.  
 - If T = 0 after accounting for found targets, return an empty plan.
 
-Determine whether full grid coverage is still needed (if T is large or unknown) or if targeted exploration suffices (if T is small and hints suggest localized clusters). Avoid redundant exploration: exclude any region already confirmed to contain no targets (e.g., previously visited and yielded no target, or ruled out by mission hints).
+Determine whether full coverage of the valid area is still needed (if T is large or unknown) or if targeted exploration suffices (if T is small and hints suggest localized clusters). Avoid redundant exploration: exclude any region already confirmed to contain no targets (e.g., previously visited and yielded no target, or ruled out by mission hints).
 
-Partition the *remaining unvisited* portion of the grid into M rectangular subregions of approximately equal area, adjusting boundaries to:  
+Partition the *remaining unvisited* portion of the valid movement area — [1, N-2] × [1, N-2] — into M rectangular subregions of approximately equal area, adjusting boundaries to:  
 - Respect mission hints (e.g., if the center is emphasized, assign multiple agents to overlap there).  
 - Avoid regions already visited or known to be target-free.  
 - Prioritize high-probability zones for early coverage, even if this means uneven region sizes.  
-Ensure all regions are fully contained within [1,N]×[1,N] and do not overlap unless justified by uncertainty, high target density, or mission ambiguity.
+Ensure all regions are fully contained within [1, N-2] × [1, N-2] and do not overlap unless justified by uncertainty, high target density, or mission ambiguity.
 
 Assign each agent one primary region, prioritizing:  
 - Agents closest to high-probability zones.  
@@ -40,7 +46,7 @@ For each agent, plan a two-phase sequence:
 
 If mission hints or discovered target patterns suggest high uncertainty (e.g., “targets are randomly distributed but at least one is near center”), assign one or more agents to explore overlapping or high-priority regions first, while others cover remaining zones in parallel. Never revisit a cell that has already been explored by any agent, unless mission ambiguity or T > number of viable regions justifies redundancy.
 
-Ensure no cell is visited more than once unless redundancy is explicitly justified. All moves must be valid (agent must remain within [1,N]×[1,N] at all times; diagonal moves allowed). Maximize parallelism by aligning all agents’ movement sequences to occur in the same step where possible.
+Ensure no cell is visited more than once unless redundancy is explicitly justified. All moves must be valid (agent must remain within [1, N-2] × [1, N-2] at all times; diagonal moves allowed). Maximize parallelism by aligning all agents’ movement sequences to occur in the same step where possible.
 
 The total number of steps equals the length of the longest agent’s action sequence. Optimize by:  
 - Minimizing travel distance to region entry points.  
@@ -49,12 +55,14 @@ The total number of steps equals the length of the longest agent’s action sequ
 - Choosing sweep patterns that minimize total moves within each region (e.g., row-wise left-to-right for rectangular regions).
 
 If T = 0 (all targets found), return an empty plan.  
-If N = 1 and the single cell (1,1) remains unvisited and unconfirmed, assign one agent to move there (if not already present) — no additional search action is needed; discovery occurs upon arrival.
+If N ≤ 3 (so that [1, N-2] is a single cell or empty), handle as follows:  
+- If N = 1 or N = 2: the valid area is empty → no targets can exist; return empty plan.  
+- If N = 3: valid area is only (1,1). If unvisited and T > 0, assign one agent to move there (if not already present) — discovery occurs upon arrival; no additional search action is needed.
 
 Final plan structure:  
 1. Parse mission for constraints and target likelihoods; cross-reference with discovered targets to infer remaining target distribution.  
-2. Identify unvisited and high-probability regions; eliminate low-probability or already-verified empty zones.  
-3. Partition the remaining grid into M rectangular regions, prioritizing mission hints and agent proximity.  
+2. Identify unvisited and high-probability regions within [1, N-2] × [1, N-2]; eliminate low-probability or already-verified empty zones.  
+3. Partition the remaining valid area into M rectangular regions, prioritizing mission hints and agent proximity.  
 4. Assign each agent one region, optimizing for minimal travel and maximum parallel efficiency.  
 5. For each agent: compute optimal move sequence from current position to a key entry point of its assigned region.  
 6. For each agent: define a complete, non-redundant, grid-sweep movement sequence to cover all cells in its assigned region.  
@@ -62,12 +70,12 @@ Final plan structure:
 8. Report the step-by-step logical plan in natural language, including:  
    - Current agent positions and discovered targets.  
    - Remaining targets T.  
-   - Region assignments per agent.  
-   - Movement goals and paths to entry points.  
+   - Region assignments per agent (with coordinates in [1, N-2] × [1, N-2]).  
+   - Movement goals and paths to entry points (specify diagonal moves if used).  
    - Sweep pattern chosen for each region and justification (e.g., “row-wise left-to-right to minimize backtracking”).  
    - Why redundancy or overlap is (or is not) used.  
    - Total estimated steps (based on longest agent’s total movement sequence).
-
+   
 user:
 N={{grid_length}}
 M={{num_agents}}
