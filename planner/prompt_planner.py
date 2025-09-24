@@ -55,7 +55,9 @@ class PromptPlanner(BasePlanner):
         self, agents, observations, rewards, terminations, truncations, infos
     ) -> dict:
         del observations["global"]
-        if any([r == 1 for r in rewards.values()]) or agents.all_idle():
+        if any([r == 1 for r in rewards.values()]) or any(
+            agents.idle(i) for i in range(self.number_of_agents)
+        ):
             # Re-plan when a target is found
             found_targets_agents = [k for k, v in rewards.items() if v == 1]
             found_targets_locations = [
