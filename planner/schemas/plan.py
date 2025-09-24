@@ -54,14 +54,6 @@ class SearchAction(Action):
             raise ValueError("x1 must be <= x2")
         if self.y1 > self.y2:
             raise ValueError("y1 must be <= y2")
-        if not (self.x1 <= self.cur_x <= self.x2):
-            raise ValueError(
-                f"Agent x={self.cur_x} must be between {self.x1} and {self.x2}"
-            )
-        if not (self.y1 <= self.cur_y <= self.y2):
-            raise ValueError(
-                f"Agent y={self.cur_y} must be between {self.y1} and {self.y2}"
-            )
         return self
 
     @model_serializer
@@ -70,7 +62,7 @@ class SearchAction(Action):
 
 
 # Union of all actions with discriminant field
-ActionModel = Union[MoveAction]
+ActionModel = Union[MoveAction, SearchAction]
 
 
 class Plan(BaseModel):

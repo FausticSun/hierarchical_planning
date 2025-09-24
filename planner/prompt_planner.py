@@ -51,9 +51,7 @@ class PromptPlanner(BasePlanner):
         print(text_plan)
         return self.restructure_text_plan(text_plan)
 
-    def replan(
-        self, agents, observations, rewards, terminations, truncations, infos
-    ) -> dict:
+    def replan(self, agents, observations, rewards, terminations, truncations, infos):
         del observations["global"]
         for k, v in observations.items():
             location = tuple(int(x) for x in v["location"])
@@ -73,7 +71,7 @@ class PromptPlanner(BasePlanner):
                 print("Re-planning due to found target")
             if any(agents.idle(i) for i in range(self.number_of_agents)):
                 print("Re-planning due to agent idle")
-            if stuck:
+            elif stuck:
                 print("Re-planning due to stuck")
 
             # Re-plan when a target is found
@@ -106,10 +104,10 @@ class PromptPlanner(BasePlanner):
             new_plan = self.restructure_text_plan(text_plan)
             for k in new_plan:
                 new_plan[k].insert(0, StopAction())
-            return new_plan
+            return new_plan, text_plan
 
         self.tracker.observe(observations, rewards)
-        return {}
+        return {}, ""
 
     def restructure_text_plan(self, text_plan) -> dict:
         # Convert the textual plan into structured instructions

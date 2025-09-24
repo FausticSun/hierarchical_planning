@@ -10,42 +10,69 @@ sample:
   mission: All targets are contained within the region from (3, 3) to (5, 5).
 ---
 system:
-Generate a natural language plan outline that systematically locates all T hidden targets in an N×N grid using M agents, starting from (1,1), while respecting the surrounding wall boundary and leveraging mission-specific hints. Prioritize minimizing total steps through parallel execution, adaptive region partitioning, and efficient movement.
+Generate a natural language plan outline that systematically locates all T hidden targets in an N×N grid using M agents, starting from (1,1), while respecting the surrounding wall boundary and leveraging mission-specific hints. Prioritize minimizing total steps through parallel execution, adaptive region partitioning, and efficient movement—using straight (cardinal) paths whenever possible.
 
 All agents begin at (1,1). The grid is indexed with (0,0) as the top-left corner, (N,0) as the top-right, (N,N) as the bottom-right, and (0,N) as the bottom-left. However, due to impassable walls along the outermost perimeter, the only allowable movement and exploration area is the interior region bounded by coordinates from (1,1) to (N-2,N-2) inclusive. That is, cells along the outermost rows and columns — specifically, any cell where x=0, x=N-1, y=0, or y=N-1 — are walls and cannot be entered or traversed. All agents must remain strictly within the valid area [1, N-2] × [1, N-2].
 
-Targets are invisible until discovered by physically moving an agent to the exact cell containing the target—there is no abstract “search” action. Discovery occurs only when an agent’s position matches the target’s location. Each agent must traverse the grid step-by-step to uncover targets; movement is allowed in any of the 8 directions (including diagonals), with each step changing position by at most one unit in any direction.
+Targets are invisible until discovered by:
+- Physically moving an agent to the exact cell containing the target (position-based discovery), OR
+- Issuing a `search` command: `search(cur_x, cur_y, x1, y1, x2, y2)`  
+  This instructs an agent currently at position (`cur_x`, `cur_y`) to initiate a systematic, low-level scan of the rectangular region bounded by (`x1`, `y1`) (top-left) and (`x2`, `y2`) (bottom-right), inclusive.  
+  The agent does **not** need to be inside the region to issue the command — but it **must** be within Manhattan distance 1 of the rectangle’s boundary (i.e., adjacent via cardinal direction: up, down, left, or right).  
+  Upon execution, the `search` command triggers an automatic, internal movement sequence:  
+    - The agent first navigates (via shortest cardinal-path) from its current position to the nearest valid entry point on the perimeter of the target region.  
+    - Once inside, it performs a **snake-like, row-wise or column-wise traversal** of the entire region, visiting every cell exactly once in a grid-aligned pattern (e.g., left-to-right on row 1, right-to-left on row 2, etc.).  
+    - Each step of this internal traversal counts as one action, and the agent reveals any target upon stepping into its cell.  
+    - The agent remains occupied for the entire duration of the search sequence and cannot perform other actions until completion.  
+  A single `search` command may cover multiple cells, but it is **not instantaneous** — its cost is the number of cells in the region (i.e., (x2−x1+1) × (y2−y1+1) steps).  
+  Multiple searches may be issued by the same agent, but only one can be active at a time.  
+  Searches are only viable when the region is large enough to justify the cost of full traversal (e.g., T is small and the region is dense with potential targets).  
+  Diagonal adjacency does not qualify for search activation—only cardinal adjacency (up, down, left, right) is valid.
 
-First, analyze the mission statement to identify any constraints or probabilistic hints about target locations (e.g., “One target is in (1,1) to (5,5)” or “Targets are likely near the center”). Use this to prioritize high-probability zones for early or concentrated exploration. If T is small (e.g., T << M), avoid full-grid coverage—instead, allocate agents to focused, overlapping, or mission-specified regions. If T is large or unknown, ensure complete, non-redundant traversal of the valid interior area.
+Movement is allowed in the four cardinal directions (up, down, left, right), with each step changing position by exactly one unit in one direction. Diagonal moves are strictly prohibited unless absolutely required for path feasibility between two adjacent valid cells — which should never occur in rectangular grid partitioning. Always prefer sequences of cardinal moves.
+
+First, analyze the mission statement to identify any constraints or probabilistic hints about target locations (e.g., “One target is in (1,1) to (5,5)” or “Targets are likely near the center”). Use this to prioritize high-probability zones for early or concentrated exploration. If T is small (e.g., T << M), avoid full-grid coverage—instead, allocate agents to focused, overlapping, or mission-specified regions. If T is large or unknown, ensure complete, non-redundant coverage of the valid interior area.
 
 Partition the valid interior region [1, N-2] × [1, N-2] into M rectangular subregions of approximately equal area, adjusting boundaries to align with mission hints (e.g., if the top-left quadrant is excluded, remove it from assignment; if the center is emphasized, assign multiple agents to overlap there). Assign each agent one primary region, ensuring all regions are fully contained within [1, N-2] × [1, N-2]. Where mission hints suggest uncertainty or multiple targets, allow strategic overlap between regions to reduce risk of missed targets.
 
 For each agent, plan a two-phase sequence:  
-(1) Move directly from (1,1) to a key entry point of its assigned region (e.g., corner, center, or high-probability cell), taking the shortest path using diagonal moves where possible;  
-(2) Systematically traverse all cells within its assigned region using an efficient coverage pattern (e.g., row-wise, spiral, or zigzag) to ensure every valid cell is visited exactly once. Movement must be stepwise—each step changes position by at most one unit in any direction (including diagonally), and no agent may move outside [1, N-2] × [1, N-2].
+(1) Move from (1,1) to a key entry point adjacent to or within its assigned region using the shortest possible path composed exclusively of cardinal moves (up, down, left, right). Avoid diagonal steps even if they yield the same step count; prefer sequences that follow grid-aligned axes.  
+(2) Either:  
+    a) Issue a `search` command to automatically scan its entire assigned region via a snake-like traversal (as described above), provided the agent is within cardinal distance 1 of the region’s boundary.  
+    b) If the region is too small (≤ 3 cells) or if the agent is already inside the region, manually traverse the region using a grid-aligned path (row-wise, column-wise, or snake pattern) — but only if it’s more efficient than initiating a search (e.g., if the region is 1 cell, just move there).  
+    Choose between manual traversal and `search` based on efficiency:  
+    - If the region contains > 3 cells and T is small (< 3), prefer a single `search` command — even if it takes many steps, it eliminates the need for manual path planning and enables full automation.  
+    - If the region is small (≤ 3 cells), manual traversal is simpler and avoids overhead.  
+    - If the region is too large or irregular to be scanned in one `search`, break it into sub-rectangles and assign separate `search` commands from valid adjacent positions.  
+    Never issue a search that spans beyond the valid interior region [1, N-2] × [1, N-2].  
 
-Ensure no cell is visited by more than one agent unless justified by mission ambiguity or T > number of regions. All movements must be valid and within the interior bounds. Maximize parallelism by aligning all agents’ movement sequences so that their step counts are as balanced as possible. The total number of steps equals the length of the longest agent’s movement sequence.
+Ensure no cell is visited by more than one agent unless justified by mission ambiguity or T > number of regions. All movements and searches must be valid and within the interior bounds. Maximize parallelism by aligning all agents’ movement and search sequences so that their total action counts (movement steps + search steps) are as balanced as possible. The total number of steps equals the length of the longest agent’s combined movement and search sequence.
 
 Optimize by:  
-- Minimizing travel distance to region entry points,  
-- Using diagonal moves to reduce step count,  
-- Prioritizing high-probability cells early in each agent’s traversal,  
+- Minimizing travel distance to region entry points using only cardinal directions,  
+- Using row-wise, column-wise, or snake-like traversal patterns for both manual movement and internal search scans,  
+- Prioritizing high-probability cells early in each agent’s path,  
 - Avoiding redundant coverage unless mission hints demand it (e.g., “targets may be in overlapping zones”),  
-- Ensuring full coverage of assigned regions without gaps.
+- Leveraging `search` commands to replace costly manual traversal when geometrically and strategically advantageous — even if the search takes many steps, it is a single high-level command that automates the entire scan,  
+- Ensuring every `search` is issued from a valid cardinal-adjacent position,  
+- Explicitly rejecting diagonal moves unless absolutely required for path feasibility (rare in rectangular regions),  
+- Never issuing a search that spans beyond the valid interior region [1, N-2] × [1, N-2].
 
 If T=0, return an empty plan.  
 If N ≤ 2, then the interior region [1, N-2] × [1, N-2] is empty or invalid—return “No valid exploration area” as no targets can be located.  
-If N=3, the only valid cell is (1,1); assign all agents to move to (1,1) in step 1; only one agent needs to arrive, but all may do so in parallel for symmetry.
+If N=3, the only valid cell is (1,1); assign all agents to move to (1,1) in step 1 using cardinal moves (e.g., no movement needed); then issue a `search(1,1,1,1,1,1)` command. This triggers a 1-step internal scan (the agent is already there). Only one agent needs to search, but all may do so in parallel for symmetry.
 
 Final plan structure:  
 1. Parse mission for constraints and target likelihoods.  
-2. Determine whether full interior coverage is needed (T large or unknown) or targeted exploration suffices (T small or hinted).  
+2. Determine whether full interior coverage is needed (T large or unknown) or targeted exploration/sensing suffices (T small or hinted).  
 3. Divide the valid interior region [1, N-2] × [1, N-2] into M non-overlapping (or strategically overlapping) rectangular subregions, respecting mission hints.  
 4. Assign each agent one region.  
-5. For each agent: compute optimal path from (1,1) to a high-efficiency entry point of its region.  
-6. For each agent: design a complete, non-redundant traversal path through its assigned region, visiting every cell exactly once using stepwise moves (no search actions).  
-7. Sequence all agent movements so that moves occur in discrete steps, with parallel execution maximized.  
-8. Report the step-by-step logical plan in natural language, including region assignments, movement goals, traversal patterns, and justification based on T, N, and mission hints.
+5. For each agent: compute optimal path from (1,1) to a high-efficiency entry point adjacent to or within its region using only cardinal moves.  
+6. For each agent: determine whether to traverse or search its region:  
+   - If traversal: design a complete, non-redundant path visiting every cell exactly once using only cardinal-direction steps.  
+   - If search: define a single search rectangle covering the entire region, ensuring the agent’s final position before issuing `search` is cardinal-adjacent to the region. The system will automatically handle the internal snake-like traversal.  
+7. Sequence all agent movements and search commands so that actions occur in discrete steps, with parallel execution maximized.  
+8. Report the step-by-step logical plan in natural language, including region assignments, movement goals, traversal/search patterns, and justification based on T, N, and mission hints.
 
 user:
 N={{grid_length}}

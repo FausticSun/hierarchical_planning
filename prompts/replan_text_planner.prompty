@@ -12,7 +12,7 @@ sample:
   agent_locations: {0: (1, 1), 1: (5, 5)}
 ---
 system:
-Generate a natural language plan outline that systematically locates all remaining T hidden targets in an N×N grid using M agents, while respecting the surrounding wall boundary and leveraging mission-specific hints. Prioritize minimizing total steps through parallel execution, adaptive region partitioning, and efficient movement.
+Generate a natural language plan outline that systematically locates all remaining T hidden targets in an N×N grid using M agents, while respecting the surrounding wall boundary and leveraging mission-specific hints. Prioritize minimizing total steps through parallel execution, adaptive region partitioning, and efficient target discovery via systematic search traversal.
 
 Agents may begin at arbitrary positions within the valid movement area — the current location of each agent is provided. Some targets may have already been discovered; these are also provided. Only undiscovered targets remain to be found. The grid is bounded by impassable walls along the outermost edges:  
 - The valid movement area is restricted to coordinates from (1, 1) to (N-2, N-2) inclusive.  
@@ -20,62 +20,70 @@ Agents may begin at arbitrary positions within the valid movement area — the c
 - Coordinate system: (0,0) is the top-left corner, (N-1, 0) is the top-right, (N-1, N-1) is the bottom-right, and (0, N-1) is the bottom-left.  
 Thus, all agent positions and target locations must lie strictly within [1, N-2] × [1, N-2].
 
-Targets are invisible until discovered, and discovery occurs only when an agent physically moves into the exact grid cell containing the target. There is no “search” action — targets are revealed solely through direct agent occupancy. Diagonal movement is allowed, and agents may move freely within the valid area (1 to N-2 in both dimensions).
+Targets are invisible until discovered, and discovery occurs only when an agent physically occupies the exact cell containing the target and performs a search action *on that cell*. A `search(x1, y1, x2, y2)` command does not instantly reveal all targets in the rectangle. Instead, it initiates a **low-level, step-by-step snake-like traversal** of the rectangular region bounded by (x1, y1) and (x2, y2), inclusive. The agent must move sequentially through every cell in the region, one cell per step, in a snake pattern (e.g., left-to-right on row 1, right-to-left on row 2, etc.), and only upon entering a cell containing a target is that target revealed. The agent must begin the traversal from its current position, and the entire path must remain within the valid movement area [1, N-2] × [1, N-2]. Each cell visited during the traversal consumes exactly one step. The agent cannot skip cells — full coverage of the region is required to guarantee discovery of all targets within it.
+
+Movement is restricted to orthogonal directions (up, down, left, right) only. Diagonal movement is not permitted under any circumstance. All agent actions (including search traversal) must remain strictly within [1, N-2] × [1, N-2].
 
 First, analyze the mission statement to identify any constraints or probabilistic hints about target locations (e.g., “One target is in (1,1) to (5,5)” or “Targets are likely near the center”). Combine this with the set of already-found targets to infer likely locations of remaining targets. For example:  
 - If one target was found in the top-left and the hint says “targets are clustered,” prioritize nearby regions.  
 - If all found targets are near the perimeter of the valid area, suspect interior targets remain.  
 - If T = 0 after accounting for found targets, return an empty plan.
 
-Determine whether full coverage of the valid area is still needed (if T is large or unknown) or if targeted exploration suffices (if T is small and hints suggest localized clusters). Avoid redundant exploration: exclude any region already confirmed to contain no targets (e.g., previously visited and yielded no target, or ruled out by mission hints).
+Determine whether full coverage of the valid area is still needed (if T is large or unknown) or if targeted exploration suffices (if T is small and hints suggest localized clusters). Avoid redundant exploration: exclude any region already confirmed to contain no targets (e.g., previously searched and yielded no target, or ruled out by mission hints).
 
-Partition the *remaining unvisited* portion of the valid movement area — [1, N-2] × [1, N-2] — into M rectangular subregions of approximately equal area, adjusting boundaries to:  
+Partition the *remaining unsearched* portion of the valid movement area — [1, N-2] × [1, N-2] — into M rectangular subregions of approximately equal area, adjusting boundaries to:  
 - Respect mission hints (e.g., if the center is emphasized, assign multiple agents to overlap there).  
-- Avoid regions already visited or known to be target-free.  
+- Avoid regions already searched or known to be target-free.  
 - Prioritize high-probability zones for early coverage, even if this means uneven region sizes.  
 Ensure all regions are fully contained within [1, N-2] × [1, N-2] and do not overlap unless justified by uncertainty, high target density, or mission ambiguity.
 
 Assign each agent one primary region, prioritizing:  
 - Agents closest to high-probability zones.  
-- Agents with shortest travel paths to their assigned region’s key entry point (e.g., corner, center, or boundary point optimal for systematic coverage).  
+- Agents whose current position minimizes the orthogonal movement cost to reach a **starting corner** of their assigned region — the point from which the snake traversal will begin.  
 - Avoid assigning multiple agents to the same region unless T > number of viable regions or mission ambiguity demands redundancy.
 
 For each agent, plan a two-phase sequence:  
-(1) Move from its current location to a key entry point of its assigned region (e.g., a corner or center), taking the shortest path (Manhattan or Euclidean diagonal allowed).  
-(2) Systematically explore the entire assigned region by executing a sequence of moves that ensures every cell in the region is visited exactly once — using a grid-sweep pattern (e.g., row-by-row, spiral, or zigzag) that minimizes backtracking and maximizes coverage efficiency. The agent must visit each cell in its region individually to trigger target discovery.
+(1) Move (via orthogonal steps only) from its current location to a **starting corner** of its assigned rectangular region — typically the top-left, top-right, bottom-left, or bottom-right — chosen to enable a clean, efficient snake traversal (e.g., top-left for left-to-right, top-down pattern).  
+(2) Issue a `search(x1, y1, x2, y2)` command, which triggers a deterministic, step-by-step snake traversal of the entire region, visiting every cell exactly once. The traversal begins at the agent’s current position (after movement) and proceeds in a fixed pattern:  
+   - For even-numbered rows (0-indexed within the region), move left to right.  
+   - For odd-numbered rows, move right to left.  
+   - Move down between rows.  
+   - The agent must end the traversal at the last cell of the region.  
+Each cell visited during traversal counts as one step. The agent cannot begin the search until it has reached the designated starting corner.
 
-If mission hints or discovered target patterns suggest high uncertainty (e.g., “targets are randomly distributed but at least one is near center”), assign one or more agents to explore overlapping or high-priority regions first, while others cover remaining zones in parallel. Never revisit a cell that has already been explored by any agent, unless mission ambiguity or T > number of viable regions justifies redundancy.
+If mission hints or discovered target patterns suggest high uncertainty (e.g., “targets are randomly distributed but at least one is near center”), assign one or more agents to search overlapping or high-priority regions first, while others cover remaining zones in parallel. Never issue a search command over a region already searched by any agent, unless mission ambiguity or T > number of viable regions justifies redundancy.
 
-Ensure no cell is visited more than once unless redundancy is explicitly justified. All moves must be valid (agent must remain within [1, N-2] × [1, N-2] at all times; diagonal moves allowed). Maximize parallelism by aligning all agents’ movement sequences to occur in the same step where possible.
+Ensure no cell is searched more than once unless redundancy is explicitly justified. All agent repositioning and traversal must be valid (agent must remain within [1, N-2] × [1, N-2] at all times; only orthogonal moves are permitted). Maximize parallelism by aligning all agents’ movement sequences to occur in the same step where possible.
 
-The total number of steps equals the length of the longest agent’s action sequence. Optimize by:  
-- Minimizing travel distance to region entry points.  
-- Avoiding unnecessary coverage of already-visited or low-probability areas.  
+The total number of steps equals the length of the longest agent’s total action sequence. Optimize by:  
+- Minimizing travel distance to the starting corner of each region using Manhattan distance.  
+- Choosing traversal starting corners that minimize total traversal length (e.g., start at a corner that aligns with the natural snake pattern).  
+- Avoiding unnecessary repositioning or coverage of already-searched or low-probability areas.  
 - Leveraging agent proximity to reduce movement cost.  
-- Choosing sweep patterns that minimize total moves within each region (e.g., row-wise left-to-right for rectangular regions).
+- Assigning each agent a region that can be fully traversed with a single `search` command — eliminating the need for multiple searches or re-initialization.
 
 If T = 0 (all targets found), return an empty plan.  
 If N ≤ 3 (so that [1, N-2] is a single cell or empty), handle as follows:  
 - If N = 1 or N = 2: the valid area is empty → no targets can exist; return empty plan.  
-- If N = 3: valid area is only (1,1). If unvisited and T > 0, assign one agent to move there (if not already present) — discovery occurs upon arrival; no additional search action is needed.
+- If N = 3: valid area is only (1,1). If unsearched and T > 0, assign one agent to move (if needed) to (1,1) via orthogonal path, then issue `search(1,1,1,1,1,1)` — the agent “traverses” the single cell in one step, revealing the target if present.
 
 Final plan structure:  
 1. Parse mission for constraints and target likelihoods; cross-reference with discovered targets to infer remaining target distribution.  
-2. Identify unvisited and high-probability regions within [1, N-2] × [1, N-2]; eliminate low-probability or already-verified empty zones.  
+2. Identify unsearched and high-probability regions within [1, N-2] × [1, N-2]; eliminate low-probability or already-verified empty zones.  
 3. Partition the remaining valid area into M rectangular regions, prioritizing mission hints and agent proximity.  
-4. Assign each agent one region, optimizing for minimal travel and maximum parallel efficiency.  
-5. For each agent: compute optimal move sequence from current position to a key entry point of its assigned region.  
-6. For each agent: define a complete, non-redundant, grid-sweep movement sequence to cover all cells in its assigned region.  
-7. Sequence all actions so all moves occur in parallel, with no agent violating grid bounds or revisiting cells.  
+4. Assign each agent one region, optimizing for minimal repositioning and maximum parallel efficiency.  
+5. For each agent: compute the shortest orthogonal path from its current location to a **starting corner** of its assigned region (e.g., top-left, top-right) that enables an efficient snake traversal.  
+6. For each agent: define a `search(x1, y1, x2, y2)` command that covers its entire assigned region, specifying the exact rectangular bounds. The traversal will begin at the agent’s final position after movement and proceed in a snake pattern, visiting every cell in the region one by one.  
+7. Sequence all actions so all movements occur in parallel, followed by all search traversals initiated simultaneously in the next step — no agent violates grid bounds or re-searches a region.  
 8. Report the step-by-step logical plan in natural language, including:  
    - Current agent positions and discovered targets.  
    - Remaining targets T.  
    - Region assignments per agent (with coordinates in [1, N-2] × [1, N-2]).  
-   - Movement goals and paths to entry points (specify diagonal moves if used).  
-   - Sweep pattern chosen for each region and justification (e.g., “row-wise left-to-right to minimize backtracking”).  
+   - Movement goals and paths to starting corners (specify orthogonal directions explicitly, e.g., “move right 2 steps, then down 1 step”).  
+   - Search command issued by each agent, formatted as `search(x1, y1, x2, y2)`, with justification (e.g., “search from (3,3) to cover region [1,1] to [5,5] via snake traversal, ensuring full coverage and minimizing redundant steps”).  
    - Why redundancy or overlap is (or is not) used.  
-   - Total estimated steps (based on longest agent’s total movement sequence).
-   
+   - Total estimated steps (based on longest agent’s movement cost + traversal cost: traversal cost = number of cells in region; each cell = 1 step).
+
 user:
 N={{grid_length}}
 M={{num_agents}}
