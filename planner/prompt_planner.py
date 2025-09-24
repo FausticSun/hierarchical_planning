@@ -27,7 +27,7 @@ class PromptPlanner(BasePlanner):
         self.number_of_agents = len(observations.keys()) - 1
         self.number_of_targets = observations["global"]["num_goals"]
 
-    def initial_plan(self):
+    def initial_plan(self) -> dict:
         model_with_structure = self.llm.with_structured_output(Plan)
         prompt = create_chat_prompt(os.getcwd() + "/prompts/initial_planner.prompty")
         initial_planner = prompt | model_with_structure
@@ -38,8 +38,8 @@ class PromptPlanner(BasePlanner):
                 "mission": self.mission_statement,
             }
         )
-        return plan
+        return plan.agents
 
-    def replan(self, observations, rewards, terminations, truncations, infos):
-        self.tracker.observe(observations, rewards)
-        pass
+    def replan(self, observations, rewards, terminations, truncations, infos) -> dict:
+        # self.tracker.observe(observations, rewards)
+        return {}
