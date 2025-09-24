@@ -5,7 +5,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_prompty import create_chat_prompt
 
 from .base import BasePlanner
-from .schemas.plan import Plan
+from .schemas.plan import Plan, StopAction
 from .utils.tracker import Tracker
 
 
@@ -17,6 +17,7 @@ class PromptPlanner(BasePlanner):
     grid_size: int = -1
     number_of_targets: int = -1
     agent_positions: Dict[int, Tuple[int, int]]
+    found_targets = []
 
     def __init__(
         self,
@@ -26,7 +27,7 @@ class PromptPlanner(BasePlanner):
         infos,
     ) -> None:
         self.llm = llm
-        self.mission_statement = observations[0]["mission"]
+        self.mission_statement = str(observations[0]["mission"])
         self.number_of_agents = len(observations.keys()) - 1
         self.number_of_targets = observations["global"]["num_goals"]
         self.agent_positions = {i: (1, 1) for i in range(0, self.number_of_agents)}
@@ -48,7 +49,49 @@ class PromptPlanner(BasePlanner):
             }
         ).content
         print(text_plan)
+        return self.restructure_text_plan(text_plan)
 
+    def replan(
+        self, agents, observations, rewards, terminations, truncations, infos
+    ) -> dict:
+        del observations["global"]
+        if any([r == 1 for r in rewards.values()]):
+            # Re-plan when a target is found
+            found_targets_agents = [k for k, v in rewards.items() if v == 1]
+            found_targets_locations = [
+                tuple(int(x) for x in observations[i]["location"])
+                for i in found_targets_agents
+            ]
+            self.found_targets.append(found_targets_locations)
+            agent_locations = {
+                k: tuple(int(x) for x in v["location"]) for k, v in observations.items()
+            }
+            # Generate a textual plan
+            prompt = create_chat_prompt(
+                os.getcwd() + "/prompts/replan_text_planner.prompty"
+            )
+            replan_text_planner = prompt | self.llm
+            text_plan = replan_text_planner.invoke(
+                {
+                    "grid_length": self.grid_size,
+                    "num_agents": self.number_of_agents,
+                    "num_targets": self.number_of_targets,
+                    "mission": self.mission_statement,
+                    "targets_found": str(self.found_targets),
+                    "agent_locations": str(agent_locations),
+                }
+            ).content
+            print(text_plan)
+            # Convert the textual plan into structured instructions
+            new_plan = self.restructure_text_plan(text_plan)
+            for k in new_plan:
+                new_plan[k].insert(0, StopAction())
+            return new_plan
+
+        self.tracker.observe(observations, rewards)
+        return {}
+
+    def restructure_text_plan(self, text_plan) -> dict:
         # Convert the textual plan into structured instructions
         prompt = create_chat_prompt(os.getcwd() + "/prompts/plan_structurer.prompty")
         model_with_structure = self.llm.with_structured_output(Plan)
@@ -63,13 +106,3 @@ class PromptPlanner(BasePlanner):
             }
         )
         return plan.agents
-
-    def replan(
-        self, agents, observations, rewards, terminations, truncations, infos
-    ) -> dict:
-        del observations["global"]
-        if any([r == 1 for r in rewards.values()]):
-            # Re-plan when a target is found
-            pass
-        self.tracker.observe(observations, rewards)
-        return {}

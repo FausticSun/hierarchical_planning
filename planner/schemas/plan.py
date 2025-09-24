@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, model_serializer, model_validator
 class ActionType(str, Enum):
     MOVE = "move"
     SEARCH = "search"
+    STOP = "stop"
 
 
 class Action(BaseModel):
@@ -16,6 +17,14 @@ class Action(BaseModel):
     def serialize(self):
         # This will be overridden in subclasses
         raise NotImplementedError("Subclasses must implement serialize")
+
+
+class StopAction(Action):
+    type: ActionType = ActionType.STOP
+
+    @model_serializer
+    def serialize(self) -> str:
+        return "stop()"
 
 
 class MoveAction(Action):

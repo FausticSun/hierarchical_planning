@@ -1,0 +1,77 @@
+---
+name: Initial Planner
+description: Creates an intial plan based on the grid length and number of agents available
+model:
+  api: chat
+sample:
+  grid_length: 10
+  num_agents: 2
+  num_targets: 2
+  mission: All targets are contained within the region from (3, 3) to (5, 5).
+  targets_found: [(2,2)]
+  agent_locations: {0: (1, 1), 1: (5, 5)}
+---
+system:
+Generate a natural language plan outline that systematically locates all remaining T hidden targets in an N×N grid using M agents, while respecting the surrounding wall boundary and leveraging mission-specific hints. Prioritize minimizing total steps through parallel execution, adaptive region partitioning, and efficient movement.
+
+Agents may begin at arbitrary positions (not necessarily (1,1)) — the current location of each agent is provided. Some targets may have already been discovered; these are also provided. Only undiscovered targets remain to be found. The grid is bounded by an impassable wall at the outer edges (coordinates must remain within [1,N]×[1,N]); internal movement is unrestricted, including diagonal steps. Targets are invisible until discovered via a search action over a rectangular region, and each search must be performed from a position within or on the boundary of the searched area.
+
+First, analyze the mission statement to identify any constraints or probabilistic hints about target locations (e.g., “One target is in (1,1) to (5,5)” or “Targets are likely near the center”). Combine this with the set of already-found targets to infer likely locations of remaining targets. For example:  
+- If one target was found in the top-left and the hint says “targets are clustered,” prioritize nearby regions.  
+- If all found targets are on the perimeter, suspect interior targets remain.  
+- If T = 0 after accounting for found targets, return an empty plan.
+
+Determine whether full grid coverage is still needed (if T is large or unknown) or if targeted search suffices (if T is small and hints suggest localized clusters). Avoid redundant searches: exclude any region already confirmed to contain no targets (e.g., previously searched and found nothing, or ruled out by mission hints).
+
+Partition the *remaining unsearched* portion of the grid into M rectangular subregions of approximately equal area, adjusting boundaries to:  
+- Respect mission hints (e.g., if the center is emphasized, assign multiple agents to overlap there).  
+- Avoid regions already searched or known to be target-free.  
+- Prioritize high-probability zones for early coverage, even if this means uneven region sizes.  
+Ensure all regions are fully contained within [1,N]×[1,N] and do not overlap unless justified by uncertainty, high target density, or mission ambiguity.
+
+Assign each agent one primary region, prioritizing:  
+- Agents closest to high-probability zones.  
+- Agents with shortest travel paths to their assigned region’s key entry point (e.g., corner, center, or boundary point optimal for searching).  
+- Avoid assigning multiple agents to the same region unless T > number of viable regions or mission ambiguity demands redundancy.
+
+For each agent, plan a two-phase sequence:  
+(1) Move from its current location to a key entry point of its assigned region (e.g., a corner or center), taking the shortest path (Manhattan or Euclidean diagonal allowed).  
+(2) Execute a single search over the entire assigned region from that position.  
+Ensure the search position is within or on the boundary of the searched area.
+
+If mission hints or discovered target patterns suggest high uncertainty (e.g., “targets are randomly distributed but at least one is near center”), assign one or more agents to search overlapping or high-priority regions first, while others cover remaining zones in parallel. Never search a region that has already been fully searched and yielded no targets.
+
+Ensure no region is searched more than once unless mission ambiguity or T > number of viable regions justifies redundancy. All moves and searches must be valid (agent must be at cur_x,cur_y before searching; search bounds must satisfy x1≤x2, y1≤y2). Maximize parallelism by aligning all agents’ move and search actions to occur in the same step where possible.
+
+The total number of steps equals the length of the longest agent’s action sequence. Optimize by:  
+- Minimizing travel distance to search start points.  
+- Avoiding unnecessary coverage of already-searched or low-probability areas.  
+- Leveraging agent proximity to reduce movement cost.
+
+If T = 0 (all targets found), return an empty plan.  
+If N = 1 and the single cell (1,1) remains unsearched and unconfirmed, assign one agent to search it from its current position (if already there) or move there first.
+
+Final plan structure:  
+1. Parse mission for constraints and target likelihoods; cross-reference with discovered targets to infer remaining target distribution.  
+2. Identify unsearched and high-probability regions; eliminate low-probability or already-verified empty zones.  
+3. Partition the remaining grid into M rectangular regions, prioritizing mission hints and agent proximity.  
+4. Assign each agent one region, optimizing for minimal travel and maximum parallel efficiency.  
+5. For each agent: compute optimal move from current position to a key entry point of its assigned region.  
+6. Assign one search action per agent over its region from the arrival point.  
+7. Sequence actions so all moves complete before searches begin, and all actions are within grid bounds.  
+8. Report the step-by-step logical plan in natural language, including:  
+   - Current agent positions and discovered targets.  
+   - Remaining targets T.  
+   - Region assignments per agent.  
+   - Movement goals and paths.  
+   - Search areas and justification based on mission hints and discovered patterns.  
+   - Why redundancy or overlap is (or is not) used.  
+   - Total estimated steps (based on longest agent path).
+
+user:
+N={{grid_length}}
+M={{num_agents}}
+T={{num_targets}}
+mission={{mission}}
+targets_found={{targets_found}}
+agent_locations: {{agent_locations}}
