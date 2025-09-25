@@ -2,12 +2,12 @@ import os
 from typing import Dict, List, Tuple
 
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages.utils import count_tokens_approximately, trim_messages
 from langchain_prompty import create_chat_prompt
 
 from .base import BasePlanner
 from .schemas.plan import Plan
 from .utils.tracker import Tracker
-from langchain_core.messages.utils import trim_messages,count_tokens_approximately
 
 
 class SuperPlanner(BasePlanner):
@@ -69,7 +69,7 @@ class SuperPlanner(BasePlanner):
         print(text_plan)
         self.history.append(ai_message)
         hla_plan = self.llm.with_structured_output(Plan).invoke(
-            self.history + self.restructure_prompt.invoke({}).messages
+            self.history + self.restructure_prompt.invoke({}).messages,
         )
         print(hla_plan)
         # Always restructure into JSON HLAs
@@ -141,7 +141,7 @@ class SuperPlanner(BasePlanner):
             truncated_history = trim_messages(
                 self.history,
                 include_system=True,
-                max_tokens=10000,
+                max_tokens=20000,
                 token_counter=count_tokens_approximately,
             )
             replan_prompt = self.replan_prompt.invoke(

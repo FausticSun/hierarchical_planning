@@ -49,7 +49,7 @@ class PromptPlanner(BasePlanner):
             }
         ).content
         print(text_plan)
-        return self.restructure_text_plan(text_plan)
+        return text_plan, self.restructure_text_plan(text_plan)
 
     def replan(self, agents, observations, rewards, terminations, truncations, infos):
         del observations["global"]

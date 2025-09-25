@@ -3,4 +3,4 @@ model:
   api: chat
 ---
 user:
-Convert the plan to JSON format.
+Issue the JSON instructions
