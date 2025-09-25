@@ -11,7 +11,7 @@ class ActionType(str, Enum):
 
 
 class Action(BaseModel):
-    type: ActionType
+    action: ActionType
 
     @model_serializer
     def serialize(self):
@@ -20,7 +20,7 @@ class Action(BaseModel):
 
 
 class StopAction(Action):
-    type: ActionType = ActionType.STOP
+    action: ActionType = ActionType.STOP
 
     @model_serializer
     def serialize(self) -> str:
@@ -28,7 +28,7 @@ class StopAction(Action):
 
 
 class MoveAction(Action):
-    type: ActionType = ActionType.MOVE
+    action: ActionType = ActionType.MOVE
     cur_x: int = Field(..., ge=0)
     cur_y: int = Field(..., ge=0)
     tar_x: int = Field(..., ge=0)
@@ -40,7 +40,7 @@ class MoveAction(Action):
 
 
 class SearchAction(Action):
-    type: ActionType = ActionType.SEARCH
+    action: ActionType = ActionType.SEARCH
     cur_x: int = Field(..., ge=0)
     cur_y: int = Field(..., ge=0)
     x1: int = Field(..., ge=0)
@@ -62,7 +62,7 @@ class SearchAction(Action):
 
 
 # Union of all actions with discriminant field
-ActionModel = Union[MoveAction, SearchAction]
+ActionModel = Union[MoveAction, SearchAction, StopAction]
 
 
 class Plan(BaseModel):

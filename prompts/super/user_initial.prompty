@@ -7,6 +7,7 @@ sample:
   num_targets: 2
   mission: All targets are contained within the region from (3, 3) to (5, 5).
 ---
+user:
 N={{grid_length}}
 M={{num_agents}}
 T={{num_targets}}
