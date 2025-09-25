@@ -1,0 +1,19 @@
+2025-09-25 16:27:29,405 [INFO] Env: env.9
+2025-09-25 16:27:29,405 [INFO] Number of agents: 5
+2025-09-25 16:27:29,405 [INFO] Grid size: 500
+2025-09-25 16:27:29,405 [INFO] Mission statement: Recon satellites have detected 10 enemy signal jammers deployed across the battlespace. These jammers interfere with UAV navigation and must be disabled.
+Analysts believe the devices were placed using a coded grid pattern to confuse interception teams.
+Your 5-drone squadron must split up, interpret the mission hints, and neutralize all jammers.
+
+Intercepted briefing:
+ * No jammer lies within 20 cells of the boundary.
+ * Two jammers sit exactly on the perimeter of the square (150,150)–(350,350).
+ * Three jammers are within 10–30 Manhattan steps of the radar post at (400,100).
+ * Two jammers are hidden northeast of (120,120) but also within 40 steps.
+ * Three jammers are mirror-placed across the vertical line x=250, all within 15 steps of y=400.
+
+Time is critical. Coordinate your drones to cover the grid efficiently and disable all jammers before they can disrupt our operations.
+2025-09-25 16:27:29,405 [INFO] Total number of targets: 10
+2025-09-25 16:27:29,405 [INFO] Trial 1/1 for env.9
+2025-09-25 16:28:34,808 [INFO] HTTP Request: POST http://localhost:20805/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-25 16:28:44,606 [INFO] HTTP Request: POST http://localhost:20805/v1/chat/completions "HTTP/1.1 200 OK"

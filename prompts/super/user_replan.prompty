@@ -8,6 +8,7 @@ sample:
   agent_locations: {0: (1, 1), 1: (5, 5)}
 ---
 user:
+Mode 2
 Reason for re-planning: {{reason}}
 targets_found={{targets_found}}
 targets_left={{targets_left}}

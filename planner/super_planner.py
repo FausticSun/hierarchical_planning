@@ -66,31 +66,13 @@ class SuperPlanner(BasePlanner):
         self.history += initial_prompt
         ai_message = self.llm.invoke(self.history)
         text_plan = ai_message.content
-        print(text_plan)
         self.history.append(ai_message)
         hla_plan = self.llm.with_structured_output(Plan).invoke(
             self.history + self.restructure_prompt.invoke({}).messages,
+            config={"temperature": 0.3},
         )
-        print(hla_plan)
         # Always restructure into JSON HLAs
         return text_plan, hla_plan.agents
-
-    # def initial_plan(self) -> dict:
-    #     # Generate a textual plan
-    #     prompt = create_chat_prompt(
-    #         os.getcwd() + "/prompts/initial_text_planner.prompty"
-    #     )
-    #     initial_text_planner = prompt | self.llm
-    #     text_plan = initial_text_planner.invoke(
-    #         {
-    #             "grid_length": self.grid_size,
-    #             "num_agents": self.number_of_agents,
-    #             "num_targets": self.number_of_targets,
-    #             "mission": self.mission_statement,
-    #         }
-    #     ).content
-    #     print(text_plan)
-    #     return self.restructure_text_plan(text_plan)
 
     def replan(self, agents, observations, rewards, terminations, truncations, infos):
         del observations["global"]
@@ -123,9 +105,8 @@ class SuperPlanner(BasePlanner):
                     i for i in range(self.number_of_agents) if agents.idle(i)
                 ]
                 reason = f"The following agents are idle: {str(idle_agents)}"
-            elif stuck:
-                print("Re-planning due to stuck")
-            print(f"Re-planning due to: {reason}")
+
+            # print(f"Re-planning due to: {reason}")
 
             # Re-plan when a target is found
             found_targets_agents = [k for k, v in rewards.items() if v == 1]
@@ -151,17 +132,15 @@ class SuperPlanner(BasePlanner):
                     "agent_locations": agent_locations,
                 }
             ).messages
-            print(replan_prompt)
             truncated_history += replan_prompt
-            ai_message = self.llm.invoke(self.history)
+            ai_message = self.llm.invoke(truncated_history)
             text_plan = ai_message.content
-            print(text_plan)
             self.history.append(ai_message)
             truncated_history.append(ai_message)
             hla_plan = self.llm.with_structured_output(Plan).invoke(
-                truncated_history + self.restructure_prompt.invoke({}).messages
+                truncated_history + self.restructure_prompt.invoke({}).messages,
+                config={"temperature": 0.3},
             )
-            print(hla_plan)
             # Always restructure into JSON HLAs
             return text_plan, hla_plan.agents
 

@@ -1,0 +1,5 @@
+env_name;trial_id;num_agents;gridsize;total_targets;steps_taken;final_reward;targets_found;targets_remaining
+env.0;1;2;20;2;158;-45.35306607279874;2;0
+env.0;2;2;20;2;158;-45.35306607279874;2;0
+env.1;1;2;20;2;140;-33.56724494281585;2;0
+env.1;2;2;20;2;140;-33.56724494281585;2;0

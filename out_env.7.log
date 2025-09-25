@@ -1,0 +1,17 @@
+2025-09-25 16:27:20,295 [INFO] Env: env.7
+2025-09-25 16:27:20,295 [INFO] Number of agents: 5
+2025-09-25 16:27:20,295 [INFO] Grid size: 250
+2025-09-25 16:27:20,295 [INFO] Mission statement: Your mission, should you choose to accept it: neutralize five encrypted signal beacons.
+
+They are arranged in a star formation centered on grid (125,125). Each beacon sits at least 40 Manhattan units apart, broadcasting coded telemetry.
+If these signals synchronize, they will guide a hostile strike on Grid City.
+
+You and your team must locate and disable every beacon before the countdown ends.
+Failure is not an option.
+
+As always, should you or your team be compromised, Command will disavow all knowledge.
+This message will self-destruct in five seconds.
+2025-09-25 16:27:20,295 [INFO] Total number of targets: 5
+2025-09-25 16:27:20,295 [INFO] Trial 1/1 for env.7
+2025-09-25 16:28:28,478 [INFO] HTTP Request: POST http://localhost:20805/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-25 16:28:38,820 [INFO] HTTP Request: POST http://localhost:20805/v1/chat/completions "HTTP/1.1 200 OK"

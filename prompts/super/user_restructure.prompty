@@ -3,4 +3,5 @@ model:
   api: chat
 ---
 user:
+Mode 3
 Issue the JSON instructions

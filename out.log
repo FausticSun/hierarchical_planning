@@ -1,0 +1,6 @@
+2025-09-25 16:23:56,486 [INFO] Env: env.4
+2025-09-25 16:23:56,486 [INFO] Number of agents: 5
+2025-09-25 16:23:56,486 [INFO] Grid size: 100
+2025-09-25 16:23:56,486 [INFO] Mission statement: A violent storm had torn through the shipping lanes, capsizing a mid-sized vessel and casting survivors into the open ocean where the local gyre began to drag them into shifting patterns. Rescue command briefs the search team of UAVs that they must locate and assist every life raft adrift in the area. The distress beacons indicate that there are three possible drift formations, but only one is genuine: either a clockwise square spiral seeded near the sector at (70,30), a counterclockwise spiral drifting off (30,70), or another clockwise spiral suspected near (70,70). Satellite drift models provide further clues. The true pattern's first movement from the seed extends eastward and its seed’s coordinates sum to an even number. The scattered survivors form an expanding spiral pattern as the currents twisted their trajectory. The rescue planner must allocate UAVs quickly to sweep the spiral before exhaustion and exposure set in.
+2025-09-25 16:23:56,486 [INFO] Total number of targets: 26
+2025-09-25 16:23:56,486 [INFO] Trial 1/1 for env.4
