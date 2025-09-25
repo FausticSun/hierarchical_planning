@@ -1,0 +1,99 @@
+---
+model:
+  api: chat
+---
+user:
+Write a system prompt for a assistant that is able to help in then following. Ensure that the system prompt is as detailed as possible, providing examples if required.
+# Environment description
+## Environment
+- $N$ × $N$ square grid, where 5 ≤ $N$ ≤ 500.
+  - The boundary cells are walls and hence the effective movement area will be ($N$ - 1) x ($N$ - 1).
+  - The grid is 0-indexed
+- $M$ agents, where 2 ≤ $M$ ≤ 5, are placed at the same initial position at coordionate (1, 1).
+  - Agents are ID-ed from 0 to M-1
+- $T$ hidden targets are randomly placed in the grid.
+- At the start of each episode, the environment provides a mission description, indicating regions (bounding box) where the targets are likely to be found.
+  - e.g., “The region from (0, 0) to (5, 5) contains 5 targets. The region from (5, 5) to (10, 10) contains 5 targets.”
+- The target is only considered found when the agent moves over it
+
+## Action Space
+
+At each timestep *t*, the environment takes in a dictionary of low-level actions(LLA: left, right, up, down, nothing) for each agent and execute them.
+
+However, for our purpose, we are interested in using LLM to control the agent behavior via the following high-level actions (HLA): 
+- `move(cur_x, cur_y, tar_x, tar_y)`\
+Instruct an agent to move from its current location (`cur_x`, `cur_y`) to the target coordinate (`tar_x`, `tar_y`).
+- `search(cur_x, cur_y, x1, y1, x2, y2)`\
+Instruct an agent at current location (`cur_x`, `cur_y`) to search within the rectangular region bounded by (`x1`, `y1`) and (`x2`, `y2`).
+The agent will translate this high-level action into movement from (`cur_x`, `cur_y`) to (`x1`, `y1`), then perform the search by moving in a snake-like fashion through the region bounded by (`x1`, `y1`) and (`x2`, `y2`).
+- `stop()`\
+Instruct the agent to stop all activity and ignore current instructions.
+
+Given a high-level action, an agent will automatically translated it into low-level action sequences. For example,
+`move(1, 1, 3, 3)` → [`right`, `right`, `down`, `down`].
+
+Use the following JSON format when assigning high-level actions to the agents:
+```JSON
+{
+    "agents": {
+        0: [
+            {"action": "move", "cur_x": 1, "cur_y": 1, "tar_x": 3, "tar_y": 3},
+            {"action": "search", "cur_x": 3, "cur_y": 3, "x1": 0, "y1": 0, "x2": 5, "y2": 5}
+        ],
+        1: [{"action": "stop"}]
+    }
+}
+```
+
+## Rewards
+
+At each timestep $t$, each agent $m$, will recieve the following reward: 
+$$
+r^m_t = \begin{cases}
+    1,  & \text{if Agent } m \text{ found a target}\\
+    -1, & \text{otherwise}
+\end{cases}
+$$
+
+The collective reward for all $M$ agents at timestep $t$ is the mean of their individual rewards.
+$$
+r_t = \frac{1}{M}\sum^{m}_{n=1} r_{t}^m
+$$
+
+For a trajectory $\tau$, which is a sequence of states and actions representing a single rollout of interactions with the environment, the cummulative reward at the final timestep $T$ is:
+$$
+R(\tau) = \sum^{T}_{t=0}\gamma^t r_t + B
+$$
+where $\gamma=0.99$ and
+$$
+B = \begin{cases}
+    (2 - \frac{T}{T_{max}}) * \frac{1}{1 - \gamma}, & \text{if all targets are found} \\
+    0, & \text{otherwise}
+\end{cases}
+$$
+
+# Assistant Tasks
+## Initial planning
+In a fresh conversation, the assistant will be given the details of the environment, specifically:
+- N: The grid length
+- M: The number of agents
+- T: The number of targets
+- Mission: Mission description
+
+The assistant will proceed to outline a plan in natural language, giving a single line sub-mission statement to each agent and then detailing what each agent should be trying to accomplish. The assistant should not give the plan in JSON format at this stage.
+
+## Re-planning
+The user will call the assistant again when re-planning is required. The user will give the reason why a re-plan may be needed, such as:
+- A target have been found
+- An agent is idle
+The user will also given the assistant a quick summary of the current state of the environment, such as which targets have already been found. The assistant may also be given the previous natural language plan(s) if available.
+The assistant will then proceed to adjust the plan as necessary, modifying the sub-mission statements and changing details. The assistant should make as minimal changes to the plan as possible, only adjusting the plans of as few agents as possible when required. This is because re-issuing the same search commands again causes the agent to move back to the start of the region and search from scratch again, potentially visting areas that have already been visited. The plan may not even need to be adjusted, if the previous plan is still valid (e.g. an agent is searching and found a target in a region but there are more targets in the region). The assistant should re-iterate the plan if that is the case. Agents should not remain idle, so if an agent is no longer required a time-wasting command such as searching the whole grid may be issued. The assistant should always give the adjusted plan in full, not just adjustments made. The plan should be in natural language. The assistant should not give the plan in JSON format at this stage.
+
+## Structuring a textual plan
+After any of the planning task or given a textual plan, the user will ask the assistant to give the high level actions for the agents in JSON format. Some additional pointers for generating the high-level actions:
+- "stop" should only be used to reset the existing instructions of an agent so that proceeding instructions can immediately be executed. If "stop" appears in the middle or end of the instruction list, all instructions preceeding "stop" will be ignored. The recommended use would be something like ["stop()", ... further instructions ...] to stop an agent from what it's doing (usually searching a region), and move to or search another region.
+- If no additional high-level actions needs to be taken, for example when a agent found a target but it should still continue it's previous instruction of searching the region, an empty dictionary can be provided in the format of
+```JSON
+{"agents": {}}
+```
+The agents will therefore continue with their existing instructions. This should not be used when an agent is idle.

@@ -1276,6 +1276,7 @@ dependencies = [
     { name = "prompty" },
     { name = "pygame" },
     { name = "python-dotenv" },
+    { name = "typing-extensions" },
 ]
 
 [package.metadata]
@@ -1296,6 +1297,7 @@ requires-dist = [
     { name = "prompty", specifier = ">=0.1.50" },
     { name = "pygame", specifier = ">=2.2.0" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
+    { name = "typing-extensions", specifier = ">=4.15.0" },
 ]
 
 [[package]]

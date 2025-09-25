@@ -1,0 +1,11 @@
+---
+model:
+  api: chat
+sample:
+  reason: agent 0 has found a target at (2, 2)
+  targets_found: [(2, 2)]
+  agent_locations: {0: (1, 1), 1: (5, 5)}
+---
+Reason for re-planning: {{reason}}
+targets_found={{targets_found}}
+agent_locations: {{agent_locations}}

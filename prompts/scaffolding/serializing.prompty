@@ -1,0 +1,111 @@
+---
+model:
+  api: chat
+---
+user:
+# Context
+At each timestep *t*, the environment takes in a dictionary of low-level actions(LLA: left, right, up, down, nothing) for each agent and execute them.
+
+However, for our purpose, we are interested in using LLM to control the agent behavior via the following high-level actions (HLA): 
+- `move(cur_x, cur_y, tar_x, tar_y)`\
+Instruct an agent to move from its current location (`cur_x`, `cur_y`) to the target coordinate (`tar_x`, `tar_y`).
+- `search(cur_x, cur_y, x1, y1, x2, y2)`\
+Instruct an agent at current location (`cur_x`, `cur_y`) to search within the rectangular region bounded by (`x1`, `y1`) and (`x2`, `y2`).
+The agent will translate this high-level action into movement from (`cur_x`, `cur_y`) to (`x1`, `y1`), then perform the search by moving in a snake-like fashion through the region bounded by (`x1`, `y1`) and (`x2`, `y2`).
+- `stop()`\
+Instruct the agent to stop all activity and ignore current instructions.
+
+Given a high-level action, an agent will automatically translated it into low-level action sequences. For example,
+`move(1, 1, 3, 3)` → [`right`, `right`, `down`, `down`].
+
+IMPT: The high-level actions follow strict formatting. e.g., ensure all the brackets and commas(if applicable) are present. 
+
+# Task
+Refer to the following code
+```python
+from typing import Annotated, Union, List, Dict
+from pydantic import BaseModel, Field
+from typing_extensions import TypeAlias
+
+# Define dynamic coordinate types using Annotated
+# These will be bound at runtime via a factory or configuration
+IntCoord: TypeAlias = Annotated[int, Field(ge=0)]  # Default min=0, no max yet
+IntCoordBounded: TypeAlias = Annotated[int, Field(ge=0, le=100)]  # Example placeholder
+
+# We'll create a factory function to generate the model with dynamic bounds
+# But the model structure itself remains fixed and uses Annotated for runtime binding
+
+class HLA_Move(BaseModel):
+    action: Literal["move"]
+    cur_x: IntCoord
+    cur_y: IntCoord
+    tar_x: IntCoord
+    tar_y: IntCoord
+
+class HLA_Search(BaseModel):
+    action: Literal["search"]
+    cur_x: IntCoord
+    cur_y: IntCoord
+    x1: IntCoord
+    y1: IntCoord
+    x2: IntCoord
+    y2: IntCoord
+
+class HLA_Stop(BaseModel):
+    action: Literal["stop"]
+
+# Union of all possible HLAs
+HLA: TypeAlias = Union[HLA_Move, HLA_Search, HLA_Stop]
+
+class AgentHLA(BaseModel):
+    agent_id: int
+    actions: List[HLA]
+
+class AgentHLAList(BaseModel):
+    agents: Dict[int, List[HLA]]  # agent_id -> list of HLAs
+
+    @classmethod
+    def create_with_bounds(cls, min_coord: int, max_coord: int) -> type['AgentHLAList']:
+        """
+        Factory method to dynamically create a new AgentHLAList class with updated coordinate bounds.
+        Returns a new class with updated Annotated types.
+        """
+        global IntCoord, IntCoordBounded
+
+        # Redefine the coordinate type with dynamic bounds
+        IntCoordBounded = Annotated[int, Field(ge=min_coord, le=max_coord)]
+
+        # Rebuild the model with the new type
+        # We need to redefine the HLA types with the new IntCoordBounded
+        class HLA_Move(BaseModel):
+            action: Literal["move"]
+            cur_x: IntCoordBounded
+            cur_y: IntCoordBounded
+            tar_x: IntCoordBounded
+            tar_y: IntCoordBounded
+
+        class HLA_Search(BaseModel):
+            action: Literal["search"]
+            cur_x: IntCoordBounded
+            cur_y: IntCoordBounded
+            x1: IntCoordBounded
+            y1: IntCoordBounded
+            x2: IntCoordBounded
+            y2: IntCoordBounded
+
+        class HLA_Stop(BaseModel):
+            action: Literal["stop"]
+
+        HLA: TypeAlias = Union[HLA_Move, HLA_Search, HLA_Stop]
+
+        class AgentHLA(BaseModel):
+            agent_id: int
+            actions: List[HLA]
+
+        class DynamicAgentHLAList(BaseModel):
+            agents: Dict[int, List[HLA]]
+
+        return DynamicAgentHLAList
+```
+Re-write the Pydantic v2 classes to be able to serialize back to the original format. There is no need to be able to serialize from the above format to the pydantic objects.
+Only add serializers, do not make major modifications such as removing constraints or dynamic bounds.

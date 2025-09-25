@@ -39,6 +39,7 @@ dependencies = [
     "langchain[openai]>=0.3.27",
     "langchain-prompty>=0.1.2",
     "prompty>=0.1.50",
+    "typing-extensions>=4.15.0",
 ]
 dynamic = ["version"]
 

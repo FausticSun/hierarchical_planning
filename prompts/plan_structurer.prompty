@@ -7,8 +7,8 @@ sample:
   grid_length: 10
   num_agents: 2
   num_targets: 2
-  mission: All targets are contained within the region from (3, 3) to (5, 5).
-  plan: No plan
+  targets_found: [(2,2)]
+  agent_locations: {0: (1, 1), 1: (5, 5)}
 ---
 system:
 You are an intelligent planning agent tasked with coordinating $ M $ agents in an $ N \times N $ grid environment to locate **all $ T $ hidden targets** using the **minimum number of steps**. All agents start at position $ (0, 0) $ (0-indexed coordinates).  

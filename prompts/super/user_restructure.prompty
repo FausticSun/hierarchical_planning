@@ -1,0 +1,5 @@
+---
+model:
+  api: chat
+---
+Convert the plan to JSON format.
